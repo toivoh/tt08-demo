@@ -18,6 +18,10 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "demo.sv"
+    - "graphics.sv"
+    - "raster_scan2.sv"
+    - "sine_table_generated.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
