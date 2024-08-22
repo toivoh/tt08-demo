@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+PROJECT_SOURCES = project.v demo.sv graphics.sv raster_scan2.sv sine_table_generated.v
 
 ifneq ($(GATES),yes)
 
