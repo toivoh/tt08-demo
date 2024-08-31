@@ -22,11 +22,13 @@ module tt_um_toivoh_demo (
 
 	wire reset = !rst_n;
 
+	wire advance_frame = ui_in[7];
+
 	wire [5:0] rgb222;
 	wire hsync, vsync, new_frame;
 	wire audio_out;
 	demo_top #(.FULL_FPS(1)) dtop(
-		.clk(clk), .reset(reset),
+		.clk(clk), .reset(reset), .advance_frame(advance_frame),
 		.rgb222(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.audio_out(audio_out)
 	);

@@ -357,6 +357,8 @@ module graphics_top #(
 		input wire audio_out,
 		input wire raise_drum,
 
+		input wire advance_frame,
+
 		output wire show_audio,
 		output wire [`PLAYER_CONTROL_BITS-1:0] player_control,
 
@@ -480,8 +482,8 @@ module graphics_top #(
 	localparam SECTION_BITS = FRAME_COUNTER_BITS+1 - LOG2_SECTION_FRAMES;
 
 `ifdef FPGA
-	//wire [SECTION_BITS-1:0] section = frame_counter >> LOG2_SECTION_FRAMES; // four chord loops per section
-	wire [SECTION_BITS-1:0] section = 4;
+	wire [SECTION_BITS-1:0] section = frame_counter >> LOG2_SECTION_FRAMES; // four chord loops per section
+	//wire [SECTION_BITS-1:0] section = 4;
 	//wire [SECTION_BITS-1:0] section = frame_counter[LOG2_SECTION_FRAMES] ? 4 : 3;
 	//wire [SECTION_BITS-1:0] section = frame_counter[LOG2_SECTION_FRAMES] ? 5 : 4;
 `else
@@ -821,14 +823,14 @@ module graphics_top #(
 	// TODO: sync to pixel
 	//assign rgb_out = color;
 
-	wire [FRAME_COUNTER_BITS-1:0] r_frame_counter_inc = r_frame_counter + new_frame;
+	wire [FRAME_COUNTER_BITS-1:0] r_frame_counter_inc = r_frame_counter + (new_frame || advance_frame);
 	wire [FRAME_COUNTER_BITS+1-1:0] frame_counter_inc = FULL_FPS ? r_frame_counter_inc : {r_frame_counter_inc, 1'b0};
 	wire [SECTION_BITS-1:0] section_inc = frame_counter_inc >> LOG2_SECTION_FRAMES; // four chord loops per section
 	wire restart_frame_counter = section_inc[SECTION_BITS-1:1] == (6 >> 1);
 
 	always @(posedge clk) begin
-		if (reset || restart_frame_counter) r_frame_counter <= 0;
+		if ((reset || restart_frame_counter) && !advance_frame) r_frame_counter <= 0;
 		//if (reset) r_frame_counter <= 3 << (LOG2_SECTION_FRAMES + FULL_FPS - 1);
-		else r_frame_counter <= r_frame_counter + new_frame;
+		else r_frame_counter <= r_frame_counter_inc;
 	end
 endmodule

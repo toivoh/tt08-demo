@@ -5,6 +5,7 @@
 
 module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BITS=`PROG_ADDR_BITS, Y_STEPS=525, Y_SAT_BITS=9, FRAME_COUNTER_BITS_SLOW=14 ) (
 		input wire clk, reset,
+		input wire advance_frame,
 
 		output wire [5:0] rgb222,
 		output wire hsync, vsync, new_frame,
@@ -32,7 +33,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 		.X_FINE_PERIOD(X_FINE_PERIOD), .X_COARSE_BITS(X_COARSE_BITS), .Y_STEPS(Y_STEPS), .Y_SAT_BITS(Y_SAT_BITS), .FRAME_COUNTER_BITS(FRAME_COUNTER_BITS),
 		.FULL_FPS(SLOW_SOUND)
 	) vtop(
-		.clk(clk), .reset(reset),
+		.clk(clk), .reset(reset), .advance_frame(advance_frame),
 		.audio_out(audio_out), .raise_drum(raise_drum), .show_audio(show_audio), .player_control(player_control),
 		.rgb_out(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.enable(enable), .x_fine(x_fine), .x_coarse(x_coarse), .y_sat(y_sat), .y_wrap(y_wrap), .raw_frame_counter(frame_counter)
