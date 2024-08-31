@@ -1,0 +1,2 @@
+`define PROG_ADDR_SIZE 100
+`define PROG_ADDR_BITS 7

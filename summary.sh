@@ -48,4 +48,5 @@ grep "timing__setup__ws\"" runs/wokwi/67-misc-reportmanufacturability/state_out.
 grep "timing__hold__ws\"" runs/wokwi/67-misc-reportmanufacturability/state_out.json
 echo "Max slew violation: "
 echo
-./tt/tt_tool.py --openlane2 --print-cell-summary
+#./tt/tt_tool.py --openlane2 --print-cell-summary
+./tt/tt_tool.py --openlane2 --print-cell-summary | grep -e 'xtp' -e 'lxtn' -e 'mux' -e 'dlclkp'

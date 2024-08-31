@@ -5,8 +5,9 @@
 
 `default_nettype none
 
-`include "sine_table_generated.vh"
-
+`include "common.vh"
+`include "synth_common.vh"
+`include "common_generated.vh"
 
 module tt_um_toivoh_demo (
 		input  wire [7:0] ui_in,    // Dedicated inputs
@@ -24,7 +25,7 @@ module tt_um_toivoh_demo (
 	wire [5:0] rgb222;
 	wire hsync, vsync, new_frame;
 	wire audio_out;
-	demo_top dtop(
+	demo_top #(.FULL_FPS(1)) dtop(
 		.clk(clk), .reset(reset),
 		.rgb222(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.audio_out(audio_out)

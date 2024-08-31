@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v demo.sv graphics.sv raster_scan2.sv sine_table_generated.v
+PROJECT_SOURCES = project.v demo.sv sine_table_generated.v logo_table_generated.v graphics.sv raster_scan2.sv tinysynth.sv alu_code_generated.v memories.sv
 
 ifneq ($(GATES),yes)
 
@@ -13,6 +13,7 @@ ifneq ($(GATES),yes)
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 COMPILE_ARGS 		+= -I$(SRC_DIR)
+COMPILE_ARGS 		+= -DFPGA
 
 else
 

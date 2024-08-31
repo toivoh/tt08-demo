@@ -93,8 +93,13 @@ module axis_scan_x2 #( parameter FINE_PERIOD = 100, COARSE_BITS = 3 ) (
 
 	always_ff @(posedge clk) begin
 		r_fine <= next_fine; // includes reset
-		r_coarse <= sum_coarse[COARSE_BITS-1:0]; // TODO: add reset?
-		phase <= phase + inc_phase; // TODO: add reset?
+		if (reset) begin
+			r_coarse <= 0;
+			phase <= `XPHASE_SYNC;
+		end else begin
+			r_coarse <= sum_coarse[COARSE_BITS-1:0];
+			phase <= phase + inc_phase;
+		end
 	end
 	assign carry_coarse = sum_coarse[COARSE_BITS];
 
@@ -218,8 +223,13 @@ module axis_scan_y2 #( parameter Y_STEPS = 525, Y_SAT_BITS = 9 ) (
 	wire inc_phase = enable && compare_match;
 
 	always_ff @(posedge clk) begin
-		y <= next_y;
-		phase <= phase + inc_phase; // TODO: add reset?
+		if (reset) begin
+			y <= 0;
+			phase <= `YPHASE_ACTIVE;
+		end else begin
+			y <= next_y;
+			phase <= phase + inc_phase;
+		end
 	end
 
 	assign y_wrap = y[Y_SAT_BITS-1:0];
@@ -275,7 +285,7 @@ module raster_scan2 #(parameter X_FINE_PERIOD = 100, X_COARSE_BITS = 3, Y_STEPS 
 
 	reg r_vsync;
 	always_ff @(posedge clk) begin
-		if (new_vga_line) r_vsync <= vsync0;
+		if (reset || new_vga_line) r_vsync <= vsync0;
 	end
 	assign vsync = r_vsync;
 
