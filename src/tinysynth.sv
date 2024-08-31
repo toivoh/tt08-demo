@@ -125,9 +125,10 @@ module ALU #(parameter A_BITS=12, NUM_REGS=`NUM_ALU_REGS, OCT_BITS=3, OSHIFT=5) 
 
 	// Find a_val
 	// ----------
-	localparam OSHIFT_CHORD = OSHIFT + `CHORD_EXTRA_OSHIFT;
+	//localparam OSHIFT_CHORD = OSHIFT + `CHORD_EXTRA_OSHIFT;
 
-	reg [A_BITS-1:0] a_val; // not a register
+	// not registers
+	reg [A_BITS-1:0] a_val;
 	reg [`A_SRC_BITS-1:0] a_src2;
 	always_comb begin
 		a_val = 'X;
@@ -276,7 +277,7 @@ module np_latch_registers #( parameter NUM_REGS=2, DATA_BITS=8 ) (
 	// -------------
 	//wire [A_BITS+1-1:0] oct_enables = {a_val & ~s_val, 1'b1};
 	wire [2**OCT_BITS-1:0] oct_enables = {a_val & ~s_val, 1'b1} & ((1 << (2**OCT_BITS-1)) - 1);
-	reg [OCT_BITS-1:0] curr_oct;
+	reg [OCT_BITS-1:0] curr_oct; // not a register
 	always_comb begin
 		case (shift_count[1:0])
 			0: curr_oct = oct;
@@ -511,7 +512,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 
 	wire [LEAD_TRACK_POS_BITS-1:0] lead_track_pos;
 	wire lead_track_pos_sub;
-	reg [7:0] lead_note; // not a register
+	// not registers
+	reg [7:0] lead_note;
 	reg lead_echo;
 
 `ifndef NEW_LEAD
@@ -602,7 +604,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			default: lead_note = 'X;
 		endcase
 		if ((!lead_on && !control[`PC_RESOLUTION]) || control[`PC_SILENCE] || (control[`PC_RESOLUTION] && track_pos0[1])) lead_note = 8'hfX;
-		lead_echo = control[`PC_RESOLUTION] ? track_pos0 : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1);
+		lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1);
 		//lead_note = 8'hfX;
 	end
 `endif

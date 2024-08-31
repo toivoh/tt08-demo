@@ -251,8 +251,6 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	reg [DZ_BITS-1:0] dz;
 	reg [T_BITS-1:0] neg_t;
 
-	wire [Z_BITS-1:0] neg_t_ext = {{(Z_BITS-T_BITS){1'b1}}, neg_t};
-
 	wire [T_BITS-1:0] nonneg_t = -neg_t; // Just for debug
 
 
@@ -277,10 +275,13 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	wire [DZ_SHIFTED_BITS-1:0] dz_ext = dz;
 	wire [DZ_SHIFTED_BITS-1:0] dz_shifted = dz_ext << nstep_zg;
 
+	//wire [DZ_SHIFTED_BITS-1:0] neg_t_ext = {{(DZ_SHIFTED_BITS-T_BITS){1'b1}}, neg_t}; // causes wrong behavior
+	wire [Z_BITS-1:0] neg_t_ext = {{(Z_BITS-T_BITS){1'b1}}, neg_t};
+
 //	wire [Z_BITS-1:0] z_plus = z + (gr_hit ? neg_t_ext : dz);
 	wire [Z_BITS-1:0] z_plus = z + (gr_hit ? neg_t_ext : dz_shifted);
 //	wire [`MAX_DZ_T_BITS-1:0] dz_or_t_dec = (gr_hit ? dz : neg_t) - 1;
-	wire [`MAX_DZ_T_BITS-1:0] dz_or_t_dec = (gr_hit ? dz : neg_t) - (1 << (gr_hit ? 0 : nstep_zg));
+	wire [`MAX_DZ_T_BITS-1:0] dz_or_t_dec = (gr_hit ? {1'b0, dz} : neg_t) - (1 << (gr_hit ? 0 : nstep_zg));
 
 	wire screen_behind = !on_screen || (screen_pos > dz);
 	wire screen_ahead = !screen_behind && !(screen_pos == dz);
@@ -329,7 +330,7 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	wire [`COLOR_CHANNEL_BITS+1-1:0] l = ~zg[ZG_BITS-1 -: `COLOR_CHANNEL_BITS+1];
 	wire bright = l[`COLOR_CHANNEL_BITS];
 	//assign r = bright ? l : '0;
-	wire [`COLOR_CHANNEL_BITS-1:0] r0 = bright ? l : '0;
+	wire [`COLOR_CHANNEL_BITS-1:0] r0 = bright ? l[`COLOR_CHANNEL_BITS-1:0] : '0;
 	//assign r = (r0 < g || force_forward) ? r0 : g;
 	assign r = (r0 < g0) ? r0 : g0;
 	//assign b = bright ? '1 : l;
@@ -392,7 +393,7 @@ module graphics_top #(
 
 	reg [FRAME_COUNTER_BITS-1:0] r_frame_counter;
 	assign raw_frame_counter = r_frame_counter;
-	wire [FRAME_COUNTER_BITS+1-1:0] frame_counter = FULL_FPS ? r_frame_counter : {r_frame_counter, 1'b0};
+	wire [FRAME_COUNTER_BITS+1-FULL_FPS-1:0] frame_counter = FULL_FPS ? r_frame_counter : {r_frame_counter, 1'b0};
 
 	reg [X_SUB_BITS-1:0] xfrac_counter;
 	always @(posedge clk) begin
@@ -589,7 +590,7 @@ module graphics_top #(
 	//wire add_y_to_phase = 1;
 
 
-	wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr = ~restart_counter;
+	wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr = ~restart_counter[WAVE_INDEX_BITS-1:0];
 	//wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr = 2-restart_counter;
 
 /*
@@ -649,7 +650,7 @@ module graphics_top #(
 	assign restart_counter = x_fine[RESTART_COUNTER_BITS+RESTART_STEP_BITS-1:RESTART_STEP_BITS];
 
 	wire on_screen = h_active && !x[9];
-	wire [`DZ_BITS-1:0] screen_pos = ~x;
+	wire [`DZ_BITS-1:0] screen_pos = ~x[`DZ_BITS-1:0];
 
 	wire [WAVE_INDEX_BITS-1:0] curr_wave_index;
 	wire signed [`DPHASE_BITS-1:0] dphase = dphases[curr_wave_index];
@@ -672,24 +673,24 @@ module graphics_top #(
 	localparam PHASE_SWITCH_SPEEDUP = 3;
 
 	//wire [1:0] pt_fc = jumps_on ? frame_counter[LOG2_PHASE_PERIOD-PHASE_SWITCH_SPEEDUP+1 -: 1] : '0;
-	wire [1:0] pt_fc = frame_counter[LOG2_PHASE_PERIOD-PHASE_SWITCH_SPEEDUP+1 -: 1];
+	wire [1:0] pt_fc = frame_counter[LOG2_PHASE_PERIOD-PHASE_SWITCH_SPEEDUP+2 -: 2];
 	wire [2:0] phase_init_shl0 = restart_counter[1:0] ^ pt_fc;
 	wire [2:0] phase_init_shl = jumps_on ? phase_init_shl0 + PHASE_SPEEDUP : restart_counter;
-	wire [2:0] phase_shl = restart ? (restart_counter[2] ? phase_init_shl : restart_counter[1:0]) : phase_shl_active;
+	wire [2:0] phase_shl = restart ? ({2'b0, restart_counter[2]} ? phase_init_shl : {1'b0, restart_counter[1:0]}) : phase_shl_active;
 `endif
 
 	// Calculate phase_init0
 	// ---------------------
-	wire [`PHASE_BITS+1-1:0] pt1 = {frame_counter, {(`PHASE_BITS-LOG2_GRAPHICS_PERIOD){1'b0}}};
+	wire [`PHASE_BITS-1:0] pt1 = {frame_counter, {(`PHASE_BITS-LOG2_GRAPHICS_PERIOD){1'b0}}};
 	//wire [`PHASE_BITS+1-1:0] phase_init0 = pt1 << phase_shl;
 	//wire [`PHASE_BITS+1-1:0] pt2 = pt1 << phase_shl[0];
-	wire [`PHASE_BITS+1-1:0] pt2 = phase_shl[0] ? ~pt1 << 1 : pt1; // reverse sign for every other shift count
-	wire [`PHASE_BITS+1-1:0] phase_init0 = pt2 << (phase_shl & ~1);
+	wire [`PHASE_BITS-1:0] pt2 = phase_shl[0] ? ~pt1 << 1 : pt1; // reverse sign for every other shift count
+	wire [`PHASE_BITS-1:0] phase_init0 = pt2 << (phase_shl & ~1);
 
 	localparam Y_MOVED_BITS = Y_BITS + 2;
 
 	localparam Y_SHL_BITS = `PHASE_BITS-Y_BITS-2;
-	wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (add_y_to_phase ? {y, {(Y_SHL_BITS){1'b0}}} : '0);
+	wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (add_y_to_phase ? {2'b0, y, {(Y_SHL_BITS){1'b0}}} : '0);
 	//wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (dphase_we || active ? {y, {(Y_SHL_BITS){1'b0}}} : '0);
 	wire [Y_MOVED_BITS-1:0] y_moved = phase_init >> Y_SHL_BITS; 
 
@@ -740,7 +741,7 @@ module graphics_top #(
 	//wire logo_move = (logo_t[10:9] == '1) && !logo_t[6];
 	wire logo_move = raise_drum && !logo_t[6];
 
-	reg logo_rot_rev;
+	reg logo_rot_rev; // not a register
 	always_comb begin
 		case (logo_t[8:7])
 			0: logo_rot_rev = 0;
@@ -751,7 +752,7 @@ module graphics_top #(
 	end
 
 	wire [4:0] logo_rot;
-	assign logo_rot = logo_move ? (logo_t ^ (logo_rot_rev ? 'h1f : 'h0)): '0;
+	assign logo_rot = logo_move ? (logo_t[4:0] ^ (logo_rot_rev ? 5'h1f : 5'h0)): '0;
 
 	//wire logo_part = x[3:0] > y_l[3:0];
 	//wire [4:0] logo_diff = y_l[3:0] - x[3:0];
@@ -824,7 +825,7 @@ module graphics_top #(
 	//assign rgb_out = color;
 
 	wire [FRAME_COUNTER_BITS-1:0] r_frame_counter_inc = r_frame_counter + (new_frame || advance_frame);
-	wire [FRAME_COUNTER_BITS+1-1:0] frame_counter_inc = FULL_FPS ? r_frame_counter_inc : {r_frame_counter_inc, 1'b0};
+	wire [FRAME_COUNTER_BITS+1-FULL_FPS-1:0] frame_counter_inc = FULL_FPS ? r_frame_counter_inc : {r_frame_counter_inc, 1'b0};
 	wire [SECTION_BITS-1:0] section_inc = frame_counter_inc >> LOG2_SECTION_FRAMES; // four chord loops per section
 	wire restart_frame_counter = section_inc[SECTION_BITS-1:1] == (6 >> 1);
 
