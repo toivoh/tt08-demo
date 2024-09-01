@@ -90,29 +90,34 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	// =================
 	wire write_zg;
 
-	reg [NSTEP_BITS-1:0] nstep, nstep_zg;
+	reg [NSTEP_BITS-1:0] nstep_reg, nstep_zg;
 	reg [NSTEP_PERIOD_BITS-1:0] nstep_counter;
+
+	//reg vis;
+	//wire next_vis;
+	//wire [NSTEP_BITS-1:0] nstep = (nstep_reg == '0) ? 0 : nstep_reg - vis;
+	wire [NSTEP_BITS-1:0] nstep = nstep_reg;
 
 	wire [NSTEP_PERIOD_BITS+1-1:0] nstep_counter_dec = nstep_counter - 1;
 	wire nstep_counter_wraps = nstep_counter_dec[NSTEP_PERIOD_BITS];
 	//wire [NSTEP_PERIOD_BITS-1:0] next_nstep_counter = nstep_counter_dec;
 	wire [NSTEP_PERIOD_BITS-1:0] next_nstep_counter = {nstep_counter_dec[NSTEP_PERIOD_BITS-1] && !nstep_counter_wraps, nstep_counter_dec[NSTEP_PERIOD_BITS-1-1:0]};
 
-	wire [NSTEP_BITS-1:0] next_nstep = nstep + (write_zg && nstep_counter_wraps && (nstep != nstep_max));
-	//wire [NSTEP_BITS-1:0] next_nstep = nstep + (write_zg && nstep_counter_wraps && (nstep != '1) && !force_forward);
-	//wire [NSTEP_BITS-1:0] next_nstep = nstep + (force_forward ? (screen_pos[6:0]=='0) : (write_zg && nstep_counter_wraps && (nstep != '1)));
-	//wire [NSTEP_BITS-1:0] next_nstep = nstep + (write_zg && nstep_counter_wraps && (nstep != 2));
+	wire [NSTEP_BITS-1:0] next_nstep = nstep_reg + (write_zg && nstep_counter_wraps && (nstep_reg != nstep_max));
+	//wire [NSTEP_BITS-1:0] next_nstep = nstep_reg + (write_zg && nstep_counter_wraps && (nstep_reg != '1) && !force_forward);
+	//wire [NSTEP_BITS-1:0] next_nstep = nstep_reg + (force_forward ? (screen_pos[6:0]=='0) : (write_zg && nstep_counter_wraps && (nstep_reg != '1)));
+	//wire [NSTEP_BITS-1:0] next_nstep = nstep_reg + (write_zg && nstep_counter_wraps && (nstep_reg != 2));
 
 	always_ff @(posedge clk) begin
 		if (restart) begin
-			nstep <= 0;
+			nstep_reg <= 0;
 			nstep_counter <= '1;
 		end else begin
 			if (write_zg) begin
 				nstep_counter <= next_nstep_counter;
 				nstep_zg <= nstep;
 			end
-			nstep <= next_nstep; // changes only when write_zg is high
+			nstep_reg <= next_nstep; // changes only when write_zg is high
 		end
 	end
 
@@ -136,6 +141,8 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	wire last_wave = wave_index == last_wave_index;
 	wire [WAVE_INDEX_BITS-1:0] next_wave_index = restart || (last_wave && zg_replace) ? 0 : wave_index + !last_wave;
 	always_ff @(posedge clk) begin
+		//if (reset) vis <= 1;
+		//else if (last_wave && zg_valid) vis <= next_vis;
 		wave_index <= next_wave_index;
 	end
 
@@ -202,9 +209,12 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	// TODO: remove shift count mux if unused
 	// can use wave_index instead of curr_wave_index since restart is low when we do:
 `ifdef USE_FM
+	wire lfm = (wave_index == 3) && !force_forward;
 	wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr_count = restart ? sine_shifter_shr : (wave_index == 3 ? (force_forward ? 0 : 1): wave_index);
+	wire [ZG_BITS-1:0] zg_acc_base = lfm ? -(1 << (ZG_BITS-2)) : (1 << (ZG_BITS-1));
 `else
 	wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr_count = restart ? sine_shifter_shr : wave_index;
+	wire [ZG_BITS-1:0] zg_acc_base = 1 << (ZG_BITS-1);
 `endif
 	//wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr_count = restart ? sine_shifter_shr : wave_index + 1;
 	//wire [WAVE_INDEX_BITS-1:0] sine_shifter_shr_count = restart ? sine_shifter_shr : 1;
@@ -224,8 +234,8 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	assign write_zg_acc = !last_wave;
 	assign write_zg = last_wave && zg_replace;
 
-	//wire [ZG_BITS-1:0] zg_sum = (zg_acc_mask ? zg_acc : (1 << (ZG_BITS-1))) + delta_zg;
-	wire [ZG_BITS-1:0] zg_sum = ((zg_acc_mask && !block_zg_acc) ? zg_acc : (1 << (ZG_BITS-1))) + delta_zg;
+	//wire [ZG_BITS-1:0] zg_sum = (zg_acc_mask ? zg_acc : zg_acc_base) + delta_zg;
+	wire [ZG_BITS-1:0] zg_sum = ((zg_acc_mask && !block_zg_acc) ? zg_acc : zg_acc_base) + delta_zg;
 	wire [COSAPPR_BITS-1:0] cosappr_sum = (zg_acc_mask ? cosappr_acc : 0) + delta_cosappr;
 
 	always_ff @(posedge clk) begin
@@ -342,12 +352,15 @@ module graphics_renderer #(parameter NUM_WAVES=3, NUM_WAVE_INDS=3, RESTART_COUNT
 	wire [`COLOR_BITS-1:0] color = {r, g, b};
 
 	//assign black = !(zg_valid && !screen_ahead && on_screen && (neg_t >= ~max_t)) && !force_forward;
-	assign black = !(zg_valid && !screen_ahead && on_screen && (flip_min_t_compare ^(neg_t <= ~min_t))) && !force_forward;
+	//assign black = !(zg_valid && !screen_ahead && on_screen && (flip_min_t_compare ^(neg_t <= ~min_t))) && !force_forward;
+	assign black = !(zg_valid && !screen_ahead && on_screen && (flip_min_t_compare ^(neg_t <= ~min_t))) && !force_forward && on_screen;
 	//assign output_color = black ? '0 : color;
-	assign output_color = color;
-	assign occlusion = (nstep == 0) && !force_forward;
-endmodule : graphics_renderer
 
+	//assign next_vis = screen_ahead && !force_forward;
+
+	assign output_color = color;
+	assign occlusion = (nstep_reg == 0) && !force_forward;
+endmodule : graphics_renderer
 
 module graphics_top #(
 		parameter X_BITS=10, Y_BITS=9, X_SUB_BITS=1, NUM_WAVES=3, NUM_WAVE_INDS=`NUM_WAVE_INDS, X_FINE_PERIOD=100, X_COARSE_BITS=3, Y_STEPS=525, Y_SAT_BITS=9,
@@ -540,9 +553,15 @@ module graphics_top #(
 			end
 			3: begin
 				//visual_audio = (sub3sect[1] == 1);
-				visual_audio = 1;
+				//visual_audio = 1;
 				p_control[`PC_PRERESOLUTION] = (subsect == '1) && (subsubsect == '1);
 				p_control[`PC_MODULATE] = p_control[`PC_PRERESOLUTION];
+				visual_audio = !subsect[1] || sub3sect[1] || p_control[`PC_PRERESOLUTION];
+				case ({subsect[0], subsubsect[1]})
+					0: force_forward = 1;
+					1: sharp_sine = 1;
+					2: fm_on = 1;
+				endcase
 			end
 			4: begin
 				p_control[`PC_MODULATE] = 1;
@@ -573,8 +592,12 @@ module graphics_top #(
 
 	//wire [`T_BITS-1:0] min_t = fade_in ? ~(frame_counter >> 1) & 255 : '0;
 	wire [`T_BITS-1:0] min_t = fade_in ? ~frame_counter & 511 : '0;
-	//wire [`NSTEP_BITS-1:0] nstep_max = force_forward ? frame_counter[LOG2_GRAPHICS_PERIOD-4 -: 2] : '1;
-	wire [`NSTEP_BITS-1:0] nstep_max = force_forward ? subsubsect : '1;
+	//wire [`NSTEP_BITS-1:0] nstep_max = 0;
+	//wire [`NSTEP_BITS-1:0] nstep_max = force_forward ? subsubsect : '1;
+
+	wire [`NSTEP_BITS-1:0] nstep_max_g = '1;
+	//wire [`NSTEP_BITS-1:0] nstep_max_g = (section == 4) ? ~subsubsect : (section[2] ? 0 : '1);
+	wire [`NSTEP_BITS-1:0] nstep_max = force_forward ? subsubsect : nstep_max_g;
 
 
 
@@ -687,10 +710,12 @@ module graphics_top #(
 	wire [`PHASE_BITS-1:0] pt2 = phase_shl[0] ? ~pt1 << 1 : pt1; // reverse sign for every other shift count
 	wire [`PHASE_BITS-1:0] phase_init0 = pt2 << (phase_shl & ~1);
 
+	wire phase_90 = dphase_we && restart_counter[0];
+
 	localparam Y_MOVED_BITS = Y_BITS + 2;
 
 	localparam Y_SHL_BITS = `PHASE_BITS-Y_BITS-2;
-	wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (add_y_to_phase ? {2'b0, y, {(Y_SHL_BITS){1'b0}}} : '0);
+	wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (add_y_to_phase ? {1'b0, phase_90, y, {(Y_SHL_BITS){1'b0}}} : '0);
 	//wire [`PHASE_BITS-1:0] phase_init = phase_init0 + (dphase_we || active ? {y, {(Y_SHL_BITS){1'b0}}} : '0);
 	wire [Y_MOVED_BITS-1:0] y_moved = phase_init >> Y_SHL_BITS; 
 
@@ -808,6 +833,8 @@ module graphics_top #(
 	wire [`COLOR_DITHER_BITS-1:0] dither = {y[0]^x[1], x[0]};
 	generate
 		for (i = 0; i < 3; i++) begin
+			wire black3 = black2 || (!force_forward && !on_screen && (i != 2 || !sharp_sine));
+
 			wire [`COLOR_CHANNEL_BITS+1-1:0] dither_sum = color[(i+1)*`COLOR_CHANNEL_BITS-1 -: `COLOR_CHANNEL_BITS] + dither;
 			//wire [`FINAL_COLOR_CHANNEL_BITS-1:0] channel = (force_sat | dither_sum[`COLOR_CHANNEL_BITS]) ? '1 : dither_sum[`COLOR_CHANNEL_BITS-1 -: `FINAL_COLOR_CHANNEL_BITS];
 
@@ -816,7 +843,7 @@ module graphics_top #(
 			wire [`FINAL_COLOR_CHANNEL_BITS-1:0] channel = force_sat2 ? '1 : channel0;
 
 			//wire channel = color[(i+1)*`COLOR_CHANNEL_BITS-1 -: `FINAL_COLOR_CHANNEL_BITS];
-			assign rgb_out[(i+1)*`FINAL_COLOR_CHANNEL_BITS-1 -: `FINAL_COLOR_CHANNEL_BITS] = (active && !force_black && (show_audio || !black2 || force_sat)) ? channel : '0;
+			assign rgb_out[(i+1)*`FINAL_COLOR_CHANNEL_BITS-1 -: `FINAL_COLOR_CHANNEL_BITS] = (active && !force_black && (show_audio || !black3 || force_sat)) ? channel : '0;
 		end
 	endgenerate
 

@@ -396,6 +396,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 
 		input wire visual,
 		input wire [`PLAYER_CONTROL_BITS-1:0] control,
+		input wire [`EXT_CONTROL_BITS-1:0] ext_control,
 
 		output wire raise_drum,
 		output wire signed [A_BITS-1:0] out
@@ -560,9 +561,15 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	end
 `else
 	localparam LEAD_NOTE_ID_BITS = 3; // TODO: size?
+
+`ifdef USE_LEAD_EMB
+	wire lead_emb = control[`PC_MODULATE] && !control[`PC_PRERESOLUTION];
+`else
+	wire lead_emb = 0;
+`endif
+
 	reg [LEAD_NOTE_ID_BITS-1:0] lead_note_id; // not a register
 	reg [7:0] lead_C; // not a register
-
 	always_comb begin
 		lead_echo = 0;
 		lead_C = 8'h10 + `DELTA_NOTE2; // C
@@ -571,40 +578,76 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			0, 3: lead_note_id = 0; // C
 			1, 4: lead_note_id = 1; // E
 			2, 5: lead_note_id = 2; // G
+`ifndef USE_LEAD_EMB
 			6: lead_note_id = 1; // E
 			7: lead_note_id = (lead_track_pos[4:3] != '1) ? 2 : 0; // G / C
+`else
+			//6: lead_note_id = !lead_emb ? 1 : (!lead_track_pos_sub ? 1 : 3); // E / (D F)
+			//6: lead_note_id = !lead_emb ? 1 : (!lead_track_pos_sub ? (lead_track_pos[4:3] != 0) : 3); // E / (D F)
+			//6: lead_note_id = 1; // E
+			6: lead_note_id = !lead_emb ? 1 : 3;
+			7: lead_note_id = !lead_emb ? ((lead_track_pos[4:3] != '1) ? 2 : 0) : 2; // (G / C) / G
+`endif
 			default: lead_note_id = 'X;
 		endcase
+
+`ifdef USE_LEAD_EMB
+		if (lead_emb && lead_track_pos[2:1] == '1) begin
+			if (lead_track_pos[0] == 0 && lead_track_pos_sub == 0) case (track_pos)
+				0: lead_note_id = 0;
+				1: lead_note_id = 1;
+				2: lead_note_id = 1;
+				3: lead_note_id = 'X; //1;
+			endcase
+			//if (lead_track_pos[0] == 1 && track_pos == 3) lead_note_id = 3;
+			if (track_pos == 3) lead_note_id = !lead_track_pos[0] ? 1 : 3;
+		end
+`endif
+
 
 		case (track_pos)
 			0: case (lead_note_id)
 				0: lead_note = lead_C; // C
 				1: lead_note = 8'h14 + DELTA_NOTE; // E
 				2: lead_note = 8'h17 + DELTA_NOTE; // G
+`ifdef USE_LEAD_EMB
+				3: lead_note = 8'h15 + DELTA_NOTE; // F
+`endif
 				default: lead_note = 'X;
 			endcase
 			1: case (lead_note_id)
 				0: lead_note = !control[`PC_PRERESOLUTION] ? 8'h2b + DELTA_NOTE : 8'h29 + DELTA_NOTE; // B / A
 				1: lead_note = !(control[`PC_PRERESOLUTION] && lead_track_pos[2:1] == 2'b10) ? 8'h12 + DELTA_NOTE : lead_C; // D / C
 				2: lead_note = 8'h17 + DELTA_NOTE; // G
+`ifdef USE_LEAD_EMB
+				//3: lead_note = 8'h15 + DELTA_NOTE; // F
+				3: lead_note = 8'h17 + DELTA_NOTE; // G
+`endif
 				default: lead_note = 'X;
 			endcase
 			2: case (lead_note_id)
 				0: lead_note = lead_C; // C
 				1: lead_note = 8'h15 + DELTA_NOTE; // F
 				2: lead_note = 8'h19 + DELTA_NOTE; // A
+`ifdef USE_LEAD_EMB
+				3: lead_note = 8'h17 + DELTA_NOTE; // G
+				//3: lead_note = 8'h15 + DELTA_NOTE; // F
+`endif
 				default: lead_note = 'X;
 			endcase
 			3: case (lead_note_id)
 				0: lead_note = lead_C; // C
 				1: lead_note = 8'h15 + DELTA_NOTE; // F
 				2: lead_note = 8'h18 + DELTA_NOTE; // Ab
+`ifdef USE_LEAD_EMB
+				3: lead_note = 8'h13 + DELTA_NOTE; // Eb
+`endif
 				default: lead_note = 'X;
 			endcase
 			default: lead_note = 'X;
 		endcase
 		if ((!lead_on && !control[`PC_RESOLUTION]) || control[`PC_SILENCE] || (control[`PC_RESOLUTION] && track_pos0[1])) lead_note = 8'hfX;
-		lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1);
+		lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1) && !lead_emb;
 		//lead_note = 8'hfX;
 	end
 `endif
@@ -668,7 +711,10 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 `endif
 	wire [OCT_BITS-1:0] oct = note[OCT_BITS+4-1:4];
 	//wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4];
-	wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1);
+	//wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1);
+	//wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1 && !ext_control[`EC_KEEP_BASS_LOW]);
+	wire [OCT_BITS-1:0] oct_bass = (visual && ext_control[`EC_VIS_BASS_OFF]) ? '1 :
+		(bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1 && !ext_control[`EC_KEEP_BASS_LOW]));
 	wire [OCT_BITS-1:0] oct_lead = lead_note[OCT_BITS+4-1:4];
 
 
@@ -678,7 +724,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	assign {oct_drums0, mantissa_drums} = drum_freq;
 	//assign oct_drums = oct_drums0;
 	//assign oct_drums = ((!visual || oct_drums0 == 0) && !(control[`PC_SILENCE] || control[`PC_RESOLUTION])) ? oct_drums0 : '1;
-	assign oct_drums = ((!visual || oct_drums0[OCT_BITS-1:1] == 0) && !(control[`PC_SILENCE] || control[`PC_RESOLUTION])) ? oct_drums0 : '1;
+	//assign oct_drums = ((!visual || oct_drums0[OCT_BITS-1:1] == 0) && !(control[`PC_SILENCE] || control[`PC_RESOLUTION])) ? oct_drums0 : '1;
+	assign oct_drums = ((!visual || (oct_drums0[OCT_BITS-1:1] == 0 && !ext_control[`EC_VIS_DRUMS_OFF])) && !(control[`PC_SILENCE] || control[`PC_RESOLUTION])) ? oct_drums0 : '1;
 	//assign oct_drums = (!visual || oct_drums0 == 0) ? (oct_drums0 + (raise_drum ? 2 : 3)) : '1;
 	//assign oct_drums = '1;
 
@@ -715,7 +762,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	assign lead_track_pos_sub = sample_counter[LEAD_TRACK_LOG2_WAIT-1];
 
 	//assign lead_on = !sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1];
-	assign lead_on = sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1];
+	assign lead_on = sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1] || control[`PC_MODULATE];
 	assign second_loop = sample_counter[TRACK_LOG2_WAIT+TRACK_POS_BITS];
 
 	assign silence_chord = (sample_counter[TRACK_LOG2_WAIT-1 -: LOG2_SILENCE_CHORD] == '0) && (!control[`PC_RESOLUTION] || (track_pos0 == '0));

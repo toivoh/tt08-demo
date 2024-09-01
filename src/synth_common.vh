@@ -58,6 +58,10 @@
 `define PC_PRERESOLUTION 5
 `define PC_SILENCE       6
 
+`define EXT_CONTROL_BITS 3
+`define EC_VIS_BASS_OFF 0
+`define EC_VIS_DRUMS_OFF 1
+`define EC_KEEP_BASS_LOW 2
 
 
 
@@ -68,3 +72,5 @@
 
 `define USE_ALU_REG_PRUNING
 `define USE_SHARED_MANTISSA_TABLE
+
+`define USE_LEAD_EMB

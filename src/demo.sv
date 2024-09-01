@@ -6,7 +6,9 @@
 module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BITS=`PROG_ADDR_BITS, Y_STEPS=525, Y_SAT_BITS=9, FRAME_COUNTER_BITS_SLOW=14 ) (
 		input wire clk, reset,
 		input wire advance_frame,
+		input wire [`EXT_CONTROL_BITS-1:0] ext_control,
 
+		output wire enable,
 		output wire [5:0] rgb222,
 		output wire hsync, vsync, new_frame,
 		output wire audio_out
@@ -21,7 +23,6 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 	// Graphics
 	// ========
 
-	wire enable;
 	wire [$clog2(X_FINE_PERIOD)-1:0] x_fine;
 	wire [X_COARSE_BITS-1:0] x_coarse;
 	wire [Y_SAT_BITS-1:0] y_sat, y_wrap;
@@ -54,7 +55,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 	player #(.A_BITS(A_BITS), .OSHIFT(OSHIFT), .OCT_BITS(OCT_BITS), .TRACK_LOG2_WAIT(A_BITS+8), .SAMPLE_COUNTER_BITS(SAMPLE_COUNTER_BITS)) player_inst (
 		.clk(clk), .reset(reset), .enable(SLOW_SOUND ? enable : 1'b1),
 		.program_addr(program_addr), .oct_counter(oct_counter), .detune_counter(detune_counter), .sample_counter(sample_counter),
-		.raise_drum(raise_drum), .visual(show_audio), .control(player_control),
+		.raise_drum(raise_drum), .visual(show_audio), .control(player_control), .ext_control(ext_control),
 		.out(out_sample)
 	);
 
