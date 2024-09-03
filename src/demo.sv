@@ -23,6 +23,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 	// Graphics
 	// ========
 
+	wire pause = ext_control[`EC_PAUSE];
 	wire [$clog2(X_FINE_PERIOD)-1:0] x_fine;
 	wire [X_COARSE_BITS-1:0] x_coarse;
 	wire [Y_SAT_BITS-1:0] y_sat, y_wrap;
@@ -34,7 +35,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 		.X_FINE_PERIOD(X_FINE_PERIOD), .X_COARSE_BITS(X_COARSE_BITS), .Y_STEPS(Y_STEPS), .Y_SAT_BITS(Y_SAT_BITS), .FRAME_COUNTER_BITS(FRAME_COUNTER_BITS),
 		.FULL_FPS(SLOW_SOUND)
 	) vtop(
-		.clk(clk), .reset(reset), .advance_frame(advance_frame),
+		.clk(clk), .reset(reset), .advance_frame(advance_frame), .pause(pause),
 		.audio_out(audio_out), .raise_drum(raise_drum), .show_audio(show_audio), .player_control(player_control),
 		.rgb_out(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.enable(enable), .x_fine(x_fine), .x_coarse(x_coarse), .y_sat(y_sat), .y_wrap(y_wrap), .raw_frame_counter(frame_counter)

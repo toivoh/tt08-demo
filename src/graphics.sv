@@ -371,7 +371,7 @@ module graphics_top #(
 		input wire audio_out,
 		input wire raise_drum,
 
-		input wire advance_frame,
+		input wire advance_frame, pause,
 
 		output wire show_audio,
 		output wire [`PLAYER_CONTROL_BITS-1:0] player_control,
@@ -528,6 +528,7 @@ module graphics_top #(
 		p_control[`PC_RESOLUTION] = 0;
 		p_control[`PC_PRERESOLUTION] = 0;
 		p_control[`PC_SILENCE] = 0;
+		p_control[`PC_RAISE_BASS] = 0;
 		case (section)
 			0: begin
 				fade_in = (subsect == 0);
@@ -565,6 +566,7 @@ module graphics_top #(
 			end
 			4: begin
 				p_control[`PC_MODULATE] = 1;
+				//p_control[`PC_RAISE_BASS] = subsect[1];
 				p_control[`PC_PRERESOLUTION] = (subsect == '1) && (subsubsect == '1);
 				jumps_on = 1;
 			end
@@ -685,6 +687,11 @@ module graphics_top #(
 	wire quick_logo_move = x[3];
 	wire [2:0] phase_shl_active = quick_logo_move ? 2 : 1;
 
+	wire bounce = 0;
+	//wire bounce = jumps_on && raise_drum;
+
+	wire bounce_en = bounce && (restart_counter == 6);
+
 `ifndef USE_GRAPHICS_JUMPS
 	wire [2:0] phase_shl = restart ? restart_counter[2:0] : phase_shl_active;
 	//wire [1:0] phase_shl = active ? x[6:5] : (restart_counter[1:0] + restart_counter[2]);
@@ -697,7 +704,11 @@ module graphics_top #(
 
 	//wire [1:0] pt_fc = jumps_on ? frame_counter[LOG2_PHASE_PERIOD-PHASE_SWITCH_SPEEDUP+1 -: 1] : '0;
 	wire [1:0] pt_fc = frame_counter[LOG2_PHASE_PERIOD-PHASE_SWITCH_SPEEDUP+2 -: 2];
-	wire [2:0] phase_init_shl0 = restart_counter[1:0] ^ pt_fc;
+
+	//wire [2:0] phase_init_shl0 = restart_counter[1:0] ^ pt_fc;
+	//wire [2:0] phase_init_shl0 = restart_counter == 6 ? 5-PHASE_SPEEDUP : (restart_counter[1:0] ^ pt_fc);
+	wire [2:0] phase_init_shl0 = bounce_en ? 5-PHASE_SPEEDUP : (restart_counter[1:0] ^ pt_fc);
+
 	wire [2:0] phase_init_shl = jumps_on ? phase_init_shl0 + PHASE_SPEEDUP : restart_counter;
 	wire [2:0] phase_shl = restart ? ({2'b0, restart_counter[2]} ? phase_init_shl : {1'b0, restart_counter[1:0]}) : phase_shl_active;
 `endif
@@ -708,7 +719,8 @@ module graphics_top #(
 	//wire [`PHASE_BITS+1-1:0] phase_init0 = pt1 << phase_shl;
 	//wire [`PHASE_BITS+1-1:0] pt2 = pt1 << phase_shl[0];
 	wire [`PHASE_BITS-1:0] pt2 = phase_shl[0] ? ~pt1 << 1 : pt1; // reverse sign for every other shift count
-	wire [`PHASE_BITS-1:0] phase_init0 = pt2 << (phase_shl & ~1);
+	wire [`PHASE_BITS-1:0] phase_mask = bounce_en ? {(`PHASE_BITS-2){1'b1}} : '1;
+	wire [`PHASE_BITS-1:0] phase_init0 = (pt2 << (phase_shl & ~1)) & phase_mask;
 
 	wire phase_90 = dphase_we && restart_counter[0];
 
@@ -851,7 +863,7 @@ module graphics_top #(
 	// TODO: sync to pixel
 	//assign rgb_out = color;
 
-	wire [FRAME_COUNTER_BITS-1:0] r_frame_counter_inc = r_frame_counter + (new_frame || advance_frame);
+	wire [FRAME_COUNTER_BITS-1:0] r_frame_counter_inc = r_frame_counter + ((new_frame && !pause)|| advance_frame);
 	wire [FRAME_COUNTER_BITS+1-FULL_FPS-1:0] frame_counter_inc = FULL_FPS ? r_frame_counter_inc : {r_frame_counter_inc, 1'b0};
 	wire [SECTION_BITS-1:0] section_inc = frame_counter_inc >> LOG2_SECTION_FRAMES; // four chord loops per section
 	wire restart_frame_counter = section_inc[SECTION_BITS-1:1] == (6 >> 1);

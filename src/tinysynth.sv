@@ -568,6 +568,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	wire lead_emb = 0;
 `endif
 
+	wire track_pos_not_3 = track_pos != 3;
 	reg [LEAD_NOTE_ID_BITS-1:0] lead_note_id; // not a register
 	reg [7:0] lead_C; // not a register
 	always_comb begin
@@ -585,8 +586,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			//6: lead_note_id = !lead_emb ? 1 : (!lead_track_pos_sub ? 1 : 3); // E / (D F)
 			//6: lead_note_id = !lead_emb ? 1 : (!lead_track_pos_sub ? (lead_track_pos[4:3] != 0) : 3); // E / (D F)
 			//6: lead_note_id = 1; // E
-			6: lead_note_id = !lead_emb ? 1 : 3;
-			7: lead_note_id = !lead_emb ? ((lead_track_pos[4:3] != '1) ? 2 : 0) : 2; // (G / C) / G
+			6: lead_note_id = !lead_emb ? (track_pos_not_3 ? 1 : 0) : 3; // (E / C) / F
+			7: lead_note_id = !lead_emb ? (track_pos_not_3 ? 2 : 1) : 2; // (G / E) / G
 `endif
 			default: lead_note_id = 'X;
 		endcase
@@ -714,7 +715,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	//wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1);
 	//wire [OCT_BITS-1:0] oct_bass = bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1 && !ext_control[`EC_KEEP_BASS_LOW]);
 	wire [OCT_BITS-1:0] oct_bass = (visual && ext_control[`EC_VIS_BASS_OFF]) ? '1 :
-		(bass_note[OCT_BITS+4-1:4] - (visual && bass_note[OCT_BITS+4-1:4] != '1 && !ext_control[`EC_KEEP_BASS_LOW]));
+		(bass_note[OCT_BITS+4-1:4] - (bass_note[OCT_BITS+4-1:4] != '1 && ((visual && !ext_control[`EC_KEEP_BASS_LOW]) || control[`PC_RAISE_BASS])));
 	wire [OCT_BITS-1:0] oct_lead = lead_note[OCT_BITS+4-1:4];
 
 
@@ -756,7 +757,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 
 	//assign track_pos = sample_counter[TRACK_LOG2_WAIT+TRACK_POS_BITS-1 -: TRACK_POS_BITS];
 	assign track_pos0 = sample_counter[TRACK_LOG2_WAIT+TRACK_POS_BITS-1 -: TRACK_POS_BITS];
-	assign track_pos = control[`PC_PRERESOLUTION] ? 1 : (control[`PC_RESOLUTION] ? '0 : track_pos0);
+	assign track_pos = control[`PC_PRERESOLUTION] ? 2'd1 : (control[`PC_RESOLUTION] ? 2'd0 : track_pos0);
 	assign bass_track_pos = sample_counter[BASS_TRACK_LOG2_WAIT+BASS_TRACK_POS_BITS-1 -: BASS_TRACK_POS_BITS];
 	assign lead_track_pos = sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS-1 -: LEAD_TRACK_POS_BITS];
 	assign lead_track_pos_sub = sample_counter[LEAD_TRACK_LOG2_WAIT-1];

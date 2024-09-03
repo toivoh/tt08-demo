@@ -27,6 +27,7 @@ module tt_um_toivoh_demo (
 	//wire reset = !rst_n_reg;
 	wire reset = !rst_n;
 
+	wire [`EXT_CONTROL_BITS-1:0] ext_control = ui_in;
 	wire advance_frame = ui_in[7];
 
 	wire enable;
@@ -34,7 +35,7 @@ module tt_um_toivoh_demo (
 	wire hsync, vsync, new_frame;
 	wire audio_out;
 	demo_top #(.FULL_FPS(1)) dtop(
-		.clk(clk), .reset(reset), .advance_frame(advance_frame), .ext_control(ui_in),
+		.clk(clk), .reset(reset), .advance_frame(advance_frame), .ext_control(ext_control),
 		.enable(enable),
 		.rgb222(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.audio_out(audio_out)
@@ -56,7 +57,7 @@ module tt_um_toivoh_demo (
 		g[1],
 		r[1]
 	};
-	assign uio_out0[7] = audio_out;
+	assign uio_out0[7] = audio_out & !ext_control[`EC_PAUSE];
 	assign uio_oe[7] = 1'b1;
 	assign uio_out0[6:0] = '0;
 	assign uio_oe[6:0] = '0;
