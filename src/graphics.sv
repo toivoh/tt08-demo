@@ -529,6 +529,7 @@ module graphics_top #(
 		p_control[`PC_PRERESOLUTION] = 0;
 		p_control[`PC_SILENCE] = 0;
 		p_control[`PC_RAISE_BASS] = 0;
+		p_control[`PC_SQUARE_LEAD] = 0;
 		case (section)
 			0: begin
 				fade_in = (subsect == 0);
@@ -567,6 +568,7 @@ module graphics_top #(
 			4: begin
 				p_control[`PC_MODULATE] = 1;
 				//p_control[`PC_RAISE_BASS] = subsect[1];
+				p_control[`PC_SQUARE_LEAD] = subsect[1] ^ (sub3sect == '1);
 				p_control[`PC_PRERESOLUTION] = (subsect == '1) && (subsubsect == '1);
 				jumps_on = 1;
 			end
@@ -689,6 +691,7 @@ module graphics_top #(
 
 	wire bounce = 0;
 	//wire bounce = jumps_on && raise_drum;
+	//wire bounce = jumps_on && (raise_drum || subsect[1]);
 
 	wire bounce_en = bounce && (restart_counter == 6);
 

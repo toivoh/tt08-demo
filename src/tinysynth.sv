@@ -182,7 +182,8 @@ module ALU #(parameter A_BITS=12, NUM_REGS=`NUM_ALU_REGS, OCT_BITS=3, OSHIFT=5) 
 			`S_OUTPUT_ACC: s_val = registers[`S_OUTPUT_ACC];
 			//`S_OUTPUT: s_val = registers[`S_OUTPUT]; // never needs to be read
 
-			`S_ZERO:     s_val = 0;
+			`S_ZERO: s_val = 0;
+			`S_A_SIGN: s_val = {acc[A_BITS-1], {(A_BITS-1){1'b0}}};
 			`S_MANTISSA: s_val = {1'b0, mantissa};
 			`S_MANTISSA_DRUMS: s_val = {1'b0, mantissa_drums};
 			`S_MANTISSA_BASS: s_val = {1'b0, mantissa_bass};
@@ -432,7 +433,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 `endif
 
 
-	wire lead_on;
+	wire lead_on, lead_on0;
 
 	wire silence_chord;
 	wire second_loop;
@@ -462,6 +463,7 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 		//note = 8'hfX;
 	end
 	assign raise_drum = (track_pos0 == 3) && second_loop;
+	//assign raise_drum = ((track_pos0 == 3) && second_loop) || (control[`PC_MODULATE] && lead_on0);
 
 
 	wire [BASS_TRACK_POS_BITS-1:0] bass_track_pos;
@@ -735,7 +737,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	//wire inst_enable = 1;
 	wire inst_enable = (inst_tag == 0) || (inst_tag == `TAG_RAISE_DRUM && raise_drum)
 		|| (inst_tag == `TAG_DETUNE_LEAD && control[`PC_DETUNE_LEAD]) || (inst_tag == `TAG_CHORD_MORE && control[`PC_CHORDS_ON])
-		|| (inst_tag == `TAG_LEAD_ECHO && lead_echo) || (inst_tag == `TAG_REDUCE_BASS && visual) || (inst_tag == `TAG_INVERT_OUT && sample_counter[0]);
+		|| (inst_tag == `TAG_LEAD_ECHO && lead_echo) || (inst_tag == `TAG_REDUCE_BASS && visual)
+		|| (inst_tag == `TAG_INVERT_OUT && sample_counter[0]) || (inst_tag == `TAG_SQUARE_LEAD && control[`PC_SQUARE_LEAD]);
 
 
 	//wire [2*A_BITS-1:0] sample_counter;
@@ -763,7 +766,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 	assign lead_track_pos_sub = sample_counter[LEAD_TRACK_LOG2_WAIT-1];
 
 	//assign lead_on = !sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1];
-	assign lead_on = sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1] || control[`PC_MODULATE];
+	assign lead_on0 = sample_counter[LEAD_TRACK_LOG2_WAIT+LEAD_TRACK_POS_BITS+1];
+	assign lead_on = lead_on0 || control[`PC_MODULATE];
 	assign second_loop = sample_counter[TRACK_LOG2_WAIT+TRACK_POS_BITS];
 
 	assign silence_chord = (sample_counter[TRACK_LOG2_WAIT-1 -: LOG2_SILENCE_CHORD] == '0) && (!control[`PC_RESOLUTION] || (track_pos0 == '0));

@@ -32,7 +32,8 @@
 `define S_PHASEINC       (`S_NONREG_BASE + 4)
 `define S_OC_SHIFTED     (`S_NONREG_BASE + 5)
 `define S_OCT_COUNTER    (`S_NONREG_BASE + 6)
-`define S_ZERO           (`S_NONREG_BASE + 7)
+`define S_A_SIGN         (`S_NONREG_BASE + 7)
+`define S_ZERO           (`S_NONREG_BASE + 8)
 
 `define TAG_BITS        3
 `define TAG_RAISE_DRUM  1
@@ -41,6 +42,8 @@
 `define TAG_LEAD_ECHO   4
 `define TAG_REDUCE_BASS 5
 `define TAG_INVERT_OUT  6
+`define TAG_SQUARE_LEAD 7
+
 
 `define MOP_FLAG_BITS 5
 
@@ -49,7 +52,7 @@
 `define MIN_OC_SHIFT 8
 `define CHORD_EXTRA_OSHIFT 3
 
-`define PLAYER_CONTROL_BITS 8
+`define PLAYER_CONTROL_BITS 9
 `define PC_CHORDS_ON     0
 `define PC_DETUNE_LEAD   1
 `define PC_SIMPLE_BASS   2
@@ -58,6 +61,7 @@
 `define PC_PRERESOLUTION 5
 `define PC_SILENCE       6
 `define PC_RAISE_BASS    7
+`define PC_SQUARE_LEAD   8
 
 `define EXT_CONTROL_BITS 4
 `define EC_VIS_BASS_OFF 0
