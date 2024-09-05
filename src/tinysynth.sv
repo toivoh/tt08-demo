@@ -590,7 +590,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			//6: lead_note_id = 1; // E
 			6: lead_note_id = !lead_emb ? (track_pos_not_3 ? 1 : 0) : 3; // (E / C) / F
 			//7: lead_note_id = !lead_emb ? (track_pos_not_3 ? 2 : 1) : 2; // (G / E) / G
-			7: lead_note_id = !lead_emb ? (track_pos[0] == 0 ? 2 : 1) : 2; // (G / E) / G
+			//7: lead_note_id = !lead_emb ? (track_pos[0] == 0 ? 2 : 1) : 2; // (G / E) / G
+			7: lead_note_id = !lead_emb ? (track_pos[0] == 0 || control[`PC_PRERESOLUTION] ? 2 : 1) : 2; // (G / E) / G
 `endif
 			default: lead_note_id = 'X;
 		endcase

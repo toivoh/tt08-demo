@@ -35,7 +35,7 @@
 
 
 `define USE_LOGO
-`define USE_OCCLUSION
+//`define USE_OCCLUSION
 `define USE_GRAPHICS_JUMPS
 `define USE_FM
 
