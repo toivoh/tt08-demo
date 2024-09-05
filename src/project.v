@@ -31,31 +31,31 @@ module tt_um_toivoh_demo (
 	wire advance_frame = ui_in[7];
 
 	wire enable;
-	wire [5:0] rgb222;
+	wire [5:0] rgb;
 	wire hsync, vsync, new_frame;
 	wire audio_out;
 	demo_top #(.FULL_FPS(1)) dtop(
 		.clk(clk), .reset(reset), .advance_frame(advance_frame), .ext_control(ext_control),
 		.enable(enable),
-		.rgb222(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
+		.rgb(rgb), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.audio_out(audio_out)
 	);
 
-	wire [1:0] r, g, b;
-	assign {r, g, b} = rgb222;
+	wire [`FINAL_COLOR_CHANNEL_BITS-1:0] r, g, b;
+	assign {r, g, b} = rgb;
 
 	wire [7:0] uo_out0, uio_out0;
 	reg [7:0] uo_out1, uio_out1;
 
 	assign uo_out0 = {
 		hsync,
-		b[0],
-		g[0],
-		r[0],
+		b[`FINAL_COLOR_CHANNEL_BITS-2],
+		g[`FINAL_COLOR_CHANNEL_BITS-2],
+		r[`FINAL_COLOR_CHANNEL_BITS-2],
 		vsync,
-		b[1],
-		g[1],
-		r[1]
+		b[`FINAL_COLOR_CHANNEL_BITS-1],
+		g[`FINAL_COLOR_CHANNEL_BITS-1],
+		r[`FINAL_COLOR_CHANNEL_BITS-1]
 	};
 	assign uio_out0[7] = audio_out & !ext_control[`EC_PAUSE];
 	assign uio_oe[7] = 1'b1;

@@ -376,7 +376,7 @@ module graphics_top #(
 		output wire show_audio,
 		output wire [`PLAYER_CONTROL_BITS-1:0] player_control,
 
-		output wire [5:0] rgb_out,
+		output wire [3*`FINAL_COLOR_CHANNEL_BITS-1:0] rgb_out,
 		output wire hsync, vsync,
 //		output reg hsync, vsync,
 		output wire new_frame,

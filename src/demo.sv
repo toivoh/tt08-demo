@@ -9,7 +9,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 		input wire [`EXT_CONTROL_BITS-1:0] ext_control,
 
 		output wire enable,
-		output wire [5:0] rgb222,
+		output wire [3*`FINAL_COLOR_CHANNEL_BITS-1:0] rgb,
 		output wire hsync, vsync, new_frame,
 		output wire audio_out
 	);
@@ -37,7 +37,7 @@ module demo_top #( parameter FULL_FPS=1, A_BITS=11, OSHIFT=6, OCT_BITS=3, PWM_BI
 	) vtop(
 		.clk(clk), .reset(reset), .advance_frame(advance_frame), .pause(pause),
 		.audio_out(audio_out), .raise_drum(raise_drum), .show_audio(show_audio), .player_control(player_control),
-		.rgb_out(rgb222), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
+		.rgb_out(rgb), .hsync(hsync), .vsync(vsync), .new_frame(new_frame),
 		.enable(enable), .x_fine(x_fine), .x_coarse(x_coarse), .y_sat(y_sat), .y_wrap(y_wrap), .raw_frame_counter(frame_counter)
 	);
 

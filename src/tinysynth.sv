@@ -589,7 +589,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			//6: lead_note_id = !lead_emb ? 1 : (!lead_track_pos_sub ? (lead_track_pos[4:3] != 0) : 3); // E / (D F)
 			//6: lead_note_id = 1; // E
 			6: lead_note_id = !lead_emb ? (track_pos_not_3 ? 1 : 0) : 3; // (E / C) / F
-			7: lead_note_id = !lead_emb ? (track_pos_not_3 ? 2 : 1) : 2; // (G / E) / G
+			//7: lead_note_id = !lead_emb ? (track_pos_not_3 ? 2 : 1) : 2; // (G / E) / G
+			7: lead_note_id = !lead_emb ? (track_pos[0] == 0 ? 2 : 1) : 2; // (G / E) / G
 `endif
 			default: lead_note_id = 'X;
 		endcase
@@ -650,7 +651,8 @@ module player #(parameter A_BITS=12, OCT_BITS=3, OSHIFT=5, TRACK_LOG2_WAIT=19, S
 			default: lead_note = 'X;
 		endcase
 		if ((!lead_on && !control[`PC_RESOLUTION]) || control[`PC_SILENCE] || (control[`PC_RESOLUTION] && track_pos0[1])) lead_note = 8'hfX;
-		lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1) && !lead_emb;
+		//lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[4:3] != '1) && !lead_emb;
+		lead_echo = control[`PC_RESOLUTION] ? track_pos0[0] : (lead_track_pos[2:1] == '1) && (lead_track_pos[3] == 0) && !lead_emb;
 		//lead_note = 8'hfX;
 	end
 `endif
