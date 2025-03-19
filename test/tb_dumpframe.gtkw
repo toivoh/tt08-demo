@@ -1,0 +1,55 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Wed Mar 19 17:43:19 2025
+[*]
+[dumpfile] "/home/toivo/code/tinytapeout/tt08-demo/test/tb_dumpframe.vcd"
+[dumpfile_mtime] "Wed Mar 19 16:43:31 2025"
+[dumpfile_size] 3646256
+[savefile] "/home/toivo/code/tinytapeout/tt08-demo/test/tb_dumpframe.gtkw"
+[timestart] 11864110000
+[size] 2870 1107
+[pos] -1 -1
+*-24.000000 11907220000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] tb_dumpframe.
+[treeopen] tb_dumpframe.user_project.
+[treeopen] tb_dumpframe.user_project.dtop.
+[treeopen] tb_dumpframe.user_project.dtop.player_inst.
+[treeopen] tb_dumpframe.user_project.dtop.player_inst.synth.
+[sst_width] 297
+[signals_width] 190
+[sst_expanded] 1
+[sst_vpaned_height] 335
+@28
+tb_dumpframe.rst_n
+tb_dumpframe.clk
+@22
+tb_dumpframe.ui_in[7:0]
+tb_dumpframe.uo_out[7:0]
+tb_dumpframe.uio_out[7:0]
+@c00022
+tb_dumpframe.out[8:0]
+@28
+(0)tb_dumpframe.out[8:0]
+(1)tb_dumpframe.out[8:0]
+(2)tb_dumpframe.out[8:0]
+(3)tb_dumpframe.out[8:0]
+(4)tb_dumpframe.out[8:0]
+(5)tb_dumpframe.out[8:0]
+(6)tb_dumpframe.out[8:0]
+(7)tb_dumpframe.out[8:0]
+(8)tb_dumpframe.out[8:0]
+@1401200
+-group_end
+@200
+-
+@28
+tb_dumpframe.user_project.dtop.audio_out
+@22
+tb_dumpframe.user_project.dtop.unsigned_sample[6:0]
+tb_dumpframe.user_project.dtop.pwm_counter[6:0]
+tb_dumpframe.user_project.dtop.player_inst.out[10:0]
+tb_dumpframe.user_project.dtop.player_inst.synth.out[10:0]
+@23
+tb_dumpframe.user_project.dtop.player_inst.synth.alu.out[10:0]
+[pattern_trace] 1
+[pattern_trace] 0

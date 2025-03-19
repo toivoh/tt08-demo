@@ -268,7 +268,11 @@ module np_latch_registers #( parameter NUM_REGS=2, DATA_BITS=8 ) (
 	generate
 		for (i = 0; i < NUM_REGS; i++) begin
 			always_ff @(posedge clk) begin
-				if (dest_mask[i] && enable) registers[i] <= acc & reg_masks[i];
+				if (reset) begin
+					registers[i] <= 0;
+				end else begin
+					if (dest_mask[i] && enable) registers[i] <= acc & reg_masks[i];
+				end
 			end
 		end
 	endgenerate

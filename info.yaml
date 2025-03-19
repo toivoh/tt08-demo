@@ -25,7 +25,7 @@ project:
     - "raster_scan2.sv"
     - "tinysynth.sv"
     - "alu_code_generated.v"
-    - "memories.sv"
+#    - "memories.sv"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:

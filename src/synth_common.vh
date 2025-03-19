@@ -72,8 +72,8 @@
 
 
 `ifndef FPGA
-`define USE_LATCHES
-`define BUFFER_CLOCK_GATE
+//`define USE_LATCHES
+//`define BUFFER_CLOCK_GATE
 `endif
 
 `define USE_ALU_REG_PRUNING
